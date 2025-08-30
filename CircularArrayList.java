@@ -14,6 +14,8 @@
  * Date: 2025-08-30
  */
 
+import java.util.NoSuchElementException;
+
 public class CircularArrayList<E> {
 
     /*
@@ -30,31 +32,73 @@ public class CircularArrayList<E> {
     protected int startIndex = 0;
 
     public CircularArrayList() {
+        data = new String[INITIAL_CAPACITY];
     }
 
     public CircularArrayList(String[] arr) {
+        if (arr == null) {
+            data = new String[INITIAL_CAPACITY];
+        } else {
+            data = new String[Math.max(arr.length, INITIAL_CAPACITY)];
+            for (int i = 0; i < arr.length; i++) {
+                data[i] = arr[i];
+            }
+            size = arr.length;
+        }
     }
 
     public String get(int index) {
-        return null;
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        return data[(startIndex + index) % data.length];
     }
 
     private void increaseCapacity() {
+        String[] newData = new String[data.length * 2];
+        for (int i = 0; i < size; i++) {
+            newData[i] = data[(startIndex + i) % data.length];
+        }
+        data = newData;
+        startIndex = 0;
     }
 
     private void shrinkCapacity() {
+        if (data.length <= INITIAL_CAPACITY) {
+            return;
+        }
+        if (size > data.length / 4) {
+            return;
+        }
+        String[] newData = new String[data.length / 2];
+        for (int i = 0; i < size; i++) {
+            newData[i] = data[(startIndex + i) % data.length];
+        }
+        data = newData;
+        startIndex = 0;
     }
 
     /*
      * Adds an element to the back of the circular array list.
      */
     public void add(String value) {
+        if (size == data.length) {
+            increaseCapacity();
+        }
+        data[(startIndex + size) % data.length] = value;
+        size++;
     }
 
     /*
      * Adds an element to the front of the circular array list.
      */
     public void addFront(String value) {
+        if (size == data.length) {
+            increaseCapacity();
+        }
+        startIndex = (startIndex - 1 + data.length) % data.length;
+        data[startIndex] = value;
+        size++;
     }
 
     /*
@@ -62,6 +106,27 @@ public class CircularArrayList<E> {
      * Throws IndexOutOfBoundsException if index is invalid.
      */
     public void add(int index, String element) {
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        if (size == data.length) {
+            increaseCapacity();
+        }
+        
+        if (index == 0) {
+            addFront(element);
+        } else if (index == size) {
+            add(element);
+        } else {
+            // Shift elements to the right
+            for (int i = size; i > index; i--) {
+                int currentPos = (startIndex + i) % data.length;
+                int prevPos = (startIndex + i - 1) % data.length;
+                data[currentPos] = data[prevPos];
+            }
+            data[(startIndex + index) % data.length] = element;
+            size++;
+        }
     }
 
     /*
@@ -71,7 +136,28 @@ public class CircularArrayList<E> {
      * Return removed element.
      */
     public String remove(int index) {
-        return null;
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        
+        String removed = data[(startIndex + index) % data.length];
+        
+        if (index == 0) {
+            removeFront();
+        } else if (index == size - 1) {
+            removeBack();
+        } else {
+            // Shift elements to the left
+            for (int i = index; i < size - 1; i++) {
+                int currentPos = (startIndex + i) % data.length;
+                int nextPos = (startIndex + i + 1) % data.length;
+                data[currentPos] = data[nextPos];
+            }
+            size--;
+            shrinkCapacity();
+        }
+        
+        return removed;
     }
 
     /*
@@ -79,6 +165,13 @@ public class CircularArrayList<E> {
      * Return true if element removed, and false otherwise.
      */
     public boolean remove(String obj) {
+        for (int i = 0; i < size; i++) {
+            if ((obj == null && data[(startIndex + i) % data.length] == null) ||
+                (obj != null && obj.equals(data[(startIndex + i) % data.length]))) {
+                remove(i);
+                return true;
+            }
+        }
         return false;
     }
 
@@ -88,7 +181,14 @@ public class CircularArrayList<E> {
      * Throws NoSuchElementException if no elements present.
      */
     public String removeFront() {
-        return null;
+        if (size == 0) {
+            throw new NoSuchElementException("List is empty");
+        }
+        String removed = data[startIndex];
+        startIndex = (startIndex + 1) % data.length;
+        size--;
+        shrinkCapacity();
+        return removed;
     }
 
     /*
@@ -97,12 +197,25 @@ public class CircularArrayList<E> {
      * Throws NoSuchElementException if no elements present.
      */
     public String removeBack() {
-        return null;
+        if (size == 0) {
+            throw new NoSuchElementException("List is empty");
+        }
+        String removed = data[(startIndex + size - 1) % data.length];
+        size--;
+        shrinkCapacity();
+        return removed;
     }
-
 
     // Note - for your debugging. We will not test it.
     public void print() {
+        System.out.print("[");
+        for (int i = 0; i < size; i++) {
+            if (i > 0) {
+                System.out.print(", ");
+            }
+            System.out.print(data[(startIndex + i) % data.length]);
+        }
+        System.out.println("]");
     }
 
     /*
@@ -111,13 +224,24 @@ public class CircularArrayList<E> {
      * Throws IndexOutOfBoundsException if index is out of range.
      */
     public String set(int index, String obj) {
-        return null;
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
+        }
+        String oldValue = data[(startIndex + index) % data.length];
+        data[(startIndex + index) % data.length] = obj;
+        return oldValue;
     }
 
     /*
      * Return true if the element is present.
      */
     public boolean contains(String obj) {
+        for (int i = 0; i < size; i++) {
+            if ((obj == null && data[(startIndex + i) % data.length] == null) ||
+                (obj != null && obj.equals(data[(startIndex + i) % data.length]))) {
+                return true;
+            }
+        }
         return false;
     }
 }
